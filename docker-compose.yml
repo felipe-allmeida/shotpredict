@@ -1,0 +1,10 @@
+version: '3.11'
+services:
+  shot-predict-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./output.json:/app/output.json
+    environment:
+      - PYTHONUNBUFFERED=1
