@@ -1,10 +1,13 @@
 
+from flask import Flask, request, jsonify
+import threading
 import torch
 import torch.nn as nn
 from torchvision import transforms,models
-import argparse
 import cv2
 import json
+
+app = Flask(__name__)
 
 def GetModel(modelName):
     if modelName == 'resnet18':
@@ -21,8 +24,29 @@ def GetModel(modelName):
                 nn.Linear(256, 3), nn.LogSoftmax(dim=1))    
     return model
 
-def shotPredict(videoPath, modelPath,jsonPath, hoopCenter,hoopSize):
 
+prediction_in_progress = False
+prediction_lock = threading.Lock()
+
+def run_prediction(videoPath, modelPath, jsonPath, hoopCenter, hoopSize):
+    global prediction_in_progress
+    with prediction_lock:
+        if prediction_in_progress:
+            print('prediction already running')
+            return
+
+        prediction_in_progress = True
+
+    try:
+        # Run your shot prediction function here
+        print('prediction started')
+        shotPredict(videoPath, modelPath, jsonPath, hoopCenter, hoopSize)
+    finally:
+        with prediction_lock:
+            print('prediction completed')
+            prediction_in_progress = False
+
+def shotPredict(videoPath, modelPath,jsonPath, hoopCenter,hoopSize):
     transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize(size=128),
@@ -31,8 +55,8 @@ def shotPredict(videoPath, modelPath,jsonPath, hoopCenter,hoopSize):
         transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])
 
     model = GetModel('resnet18')
-    model.load_state_dict(torch.load(modelPath))
-    mps_device = torch.device("mps")
+    model.load_state_dict(torch.load(modelPath, map_location="cpu"))
+    mps_device = torch.device("cpu")
 
     model.to(mps_device)
     model.eval()
@@ -123,9 +147,20 @@ def shotPredict(videoPath, modelPath,jsonPath, hoopCenter,hoopSize):
         else:
             break
     cap.release()
+    
 
+@app.route('/output', methods=['GET'])
+def get_output_json():
+    jsonPath = "./output.json"
+    try:
+        with open(jsonPath, 'r') as json_file:
+            data = json.load(json_file)
+            return jsonify(data)
+    except FileNotFoundError:
+        return jsonify({"error": "Output JSON not found."})
 
-def main():
+@app.route('/predict', methods=['POST'])
+def predict_shot():
     #parser = argparse.ArgumentParser(description=" nothing")
     #parser.add_argument('--videoPath',type=str,help='path to video file')
     #args = parser.parse_args()
@@ -135,9 +170,15 @@ def main():
     jsonPath = "./output.json"
     hoopCenter = [int(96), int(120)]
     hoopSize = [int(20),int(10)]
-    shotPredict(videoPath, modelPath,jsonPath, hoopCenter,hoopSize)
-    pass
 
+    prediction_thread = threading.Thread(target=run_prediction, args=(videoPath, modelPath, jsonPath, hoopCenter, hoopSize))
+    prediction_thread.start()
+
+    return ('prediction started', 202)
+
+@app.route('/', methods=['GET'])
+def welcome():
+    return "Basketball Shot Prediction API is running!"
 
 if __name__ == "__main__":
-    main()
+    app.run(host='0.0.0.0', port=5000)

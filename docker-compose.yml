@@ -3,8 +3,11 @@ services:
   shot-predict-app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: shortprediction/Dockerfile
+    ports:
+      - "5000:5000"
     volumes:
-      - ./output.json:/app/output.json
+      - ./shortprediction:/app
+      - ./requirements.txt:/app/requirements.txt
     environment:
       - PYTHONUNBUFFERED=1
