@@ -6,6 +6,7 @@ import torch.nn as nn
 from torchvision import transforms,models
 import cv2
 import json
+import random
 
 app = Flask(__name__)
 
@@ -39,7 +40,7 @@ def run_prediction(videoPath, modelPath, jsonPath, hoopCenter, hoopSize):
 
     try:
         # Run your shot prediction function here
-        print('prediction started')
+        print('prediction started for video %s', (videoPath))
         shotPredict(videoPath, modelPath, jsonPath, hoopCenter, hoopSize)
     finally:
         with prediction_lock:
@@ -149,7 +150,7 @@ def shotPredict(videoPath, modelPath,jsonPath, hoopCenter,hoopSize):
     cap.release()
     
 
-@app.route('/output', methods=['GET'])
+@app.route('/predict', methods=['GET'])
 def get_output_json():
     jsonPath = "./output.json"
     try:
@@ -165,7 +166,8 @@ def predict_shot():
     #parser.add_argument('--videoPath',type=str,help='path to video file')
     #args = parser.parse_args()
 
-    videoPath = "./4810.mp4"
+    video = random.choice([4801, 4802, 4803, 4804, 4805, 4806, 4807, 4808, 4809, 4810])
+    videoPath = "./%s.mp4" % (video)
     modelPath = "./model_example.pt"
     jsonPath = "./output.json"
     hoopCenter = [int(96), int(120)]

@@ -15,7 +15,7 @@ RUN apt-get install -y libglib2.0-0 libsm6 libxrender1 libxext6
 # Install PyTorch
 # You can choose one of the provided links to install PyTorch
 # For example, using the official PyTorch website:
-RUN pip3 install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r ./api/requirements.txt
 
 EXPOSE 5000
 
